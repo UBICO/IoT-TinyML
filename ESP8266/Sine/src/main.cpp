@@ -4,6 +4,7 @@
 #include <AsyncMqttClient.h>
 #include <EloquentTinyML.h>
 #include "sine_model_quantized.h"
+#include "time.h"
 
 #define N_INPUTS 1
 #define N_OUTPUTS 1
@@ -29,6 +30,16 @@ Ticker mqttReconnectTimer;
 WiFiEventHandler wifiConnectHandler;
 WiFiEventHandler wifiDisconnectHandler;
 Ticker wifiReconnectTimer;
+
+// NTP server to request epoch time
+const char* ntpServer = "pool.ntp.org";
+
+// Variable to save current epoch time
+unsigned long epochTime;
+
+//Variable to keep track of the iteration number
+
+int currentIteration = 0;
 
 //Method to connect to WiFi
 
@@ -104,12 +115,24 @@ void onMqttPublish(uint16_t packetId) {
   Serial.println(packetId);
 }
 
+// Function that gets current epoch time
+unsigned long getTime() {
+  time_t now;
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) {
+    Serial.println("Cannot get time from ntp server.");
+    return(0);
+  }
+  time(&now);
+  return now;
+}
+
 //Setup method
 
 void setup() {
   Serial.begin(9600);
   Serial.println();
-  Serial.println();
+  configTime(0,0, ntpServer);
 
   wifiConnectHandler = WiFi.onStationModeGotIP(onWifiConnect);
   wifiDisconnectHandler = WiFi.onStationModeDisconnected(onWifiDisconnect);
@@ -132,7 +155,6 @@ void setup() {
       Serial.print("Error initializing TensorFlow");        
       while (true) delay(1000);
   }
-
 }
 
 //Loop method
@@ -141,13 +163,26 @@ void loop() {
   if (WiFi.isConnected() && mqttClient.connected()) {
 
   //Runs 10 iterations and for each one sends the result
+  //Waits 5 seconds, then restarts
 
   for (float i = 0; i < 10; i++) {
+
+        currentIteration += 1; //To keep track of iterations between loops
+
         // pick x from 0 to PI
         float x = 3.14 * i / 10;
         float y = sin(x);
         float input[1] = { x };
+
+        //Here i get the unix time for having a timestamp of the operation
+
+        epochTime = getTime();
+
+        uint32_t start = micros(); //Evaluation start time
+
         float predicted = tf.predict(input);
+
+        uint32_t end = micros() - start; //Evaluation end time
         
         Serial.print("sin(");
         Serial.print(x);
@@ -156,7 +191,7 @@ void loop() {
         Serial.print("\t predicted: ");
         Serial.println(predicted);
 
-        //TODO: add timestamp and other useful info
+        //{"board": "esp8266", "model": "sin", "result": 3.14, "iteration": 1, "microseconds": 120, "timestamp": "1683815110824"}
 
         String resultString = "{'sin':" + String(x) + "}";
       

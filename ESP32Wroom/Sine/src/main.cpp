@@ -1,6 +1,8 @@
 #include <WiFi.h>
 #include <EloquentTinyML.h>
 #include "sine_model_quantized.h"
+#include "esp_timer.h"
+#include "time.h"
 
 #define N_INPUTS 1
 #define N_OUTPUTS 1
@@ -32,6 +34,16 @@ AsyncMqttClient mqttClient;
 TimerHandle_t mqttReconnectTimer;
 TimerHandle_t wifiReconnectTimer;
 
+// NTP server to request epoch time
+const char* ntpServer = "pool.ntp.org";
+
+// Variable to save current epoch time
+unsigned long epochTime; 
+
+//Variable to keep track of the iteration number
+
+int currentIteration = 0;
+
 //Method to connect to WiFi
 
 void connectToWifi() {
@@ -58,13 +70,11 @@ void WiFiEvent(WiFiEvent_t event) {
         Serial.println("IP address: ");
         Serial.println(WiFi.localIP());
         connectToMqtt();
-        isWiFiConnected = true;
         break;
     case SYSTEM_EVENT_STA_DISCONNECTED:
         Serial.println("WiFi lost connection");
         xTimerStop(mqttReconnectTimer, 0); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
         xTimerStart(wifiReconnectTimer, 0);
-        isWiFiConnected = false;
         break;
     }
 }
@@ -113,11 +123,24 @@ void onMqttPublish(uint16_t packetId) {
   Serial.println(packetId);
 }
 
+// Function that gets current epoch time
+unsigned long getTime() {
+  time_t now;
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) {
+    Serial.println("Cannot get time from ntp server.");
+    return(0);
+  }
+  time(&now);
+  return now;
+}
+
 //Setup method
 
 void setup() {
   Serial.begin(9600);
   Serial.println();
+  configTime(0,0, ntpServer);
 
   mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
   wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToWifi));
@@ -151,13 +174,24 @@ void loop() {
   if (WiFi.isConnected() && mqttClient.connected()) {
 
   //Runs 10 iterations and for each one sends the result
+  //Waits 5 seconds, then restarts
 
   for (float i = 0; i < 10; i++) {
+
+        currentIteration += 1; //To keep track of iterations between loops
+
         // pick x from 0 to PI
         float x = 3.14 * i / 10;
         float y = sin(x);
         float input[1] = { x };
+
+        //Here i get the unix time for having a timestamp of the operation
+
+        epochTime = getTime();
+
+        int start = esp_timer_get_time(); //Evaluation start time
         float predicted = tf.predict(input);
+        int end = esp_timer_get_time() - start; //Evaluation end time
         
         Serial.print("sin(");
         Serial.print(x);
@@ -166,7 +200,7 @@ void loop() {
         Serial.print("\t predicted: ");
         Serial.println(predicted);
 
-        //TODO: add timestamp and other useful info
+        //{"board": "esp32-dev", "sin": 3.14, "iteration": 1, "microseconds": 120, "timestamp": "1683815110824"}
 
         String resultString = "{'sin':" + String(x) + "}";
 
