@@ -191,7 +191,7 @@ void loop() {
         Serial.print("\t predicted: ");
         Serial.println(predicted);
 
-        //{"board": "esp8266", "model": "sin", "result": 3.14, "iteration": 1, "microseconds": 120, "timestamp": "1683815110824"}
+        //{"board": "esp8266", "model": "sine", "result": 3.14, "iteration": 1, "microseconds": 120, "timestamp": "1683815110824"}
 
         String resultString = "{'sin':" + String(x) + "}";
       

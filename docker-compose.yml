@@ -5,7 +5,7 @@ services:
     restart: always
     environment:
     - RABBITMQ_DEFAULT_USER=federico
-    - RABBITMQ_DEFAULT_PASS=iotdemo
+    - RABBITMQ_DEFAULT_PASS=iotexamdemo
     command: "/bin/bash -c \"rabbitmq-plugins enable rabbitmq_mqtt; rabbitmq-plugins enable rabbitmq_prometheus; rabbitmq-server\""
     ports:
       - 1883:1883
