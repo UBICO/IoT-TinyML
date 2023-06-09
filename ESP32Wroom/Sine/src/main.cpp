@@ -1,6 +1,6 @@
 #include <WiFi.h>
 #include <EloquentTinyML.h>
-#include "sine_model_quantized.h"
+#include "sine_model.h"
 #include "esp_timer.h"
 #include "time.h"
 
@@ -168,7 +168,7 @@ void setup()
 
   // TensorFlow initialization
 
-  tf.begin(sine_model_quantized_tflite);
+  tf.begin(model_data);
 
   // check if model loaded fine
   if (!tf.initialized())

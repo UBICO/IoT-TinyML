@@ -3,7 +3,7 @@
 #include <Ticker.h>
 #include <AsyncMqttClient.h>
 #include <EloquentTinyML.h>
-#include "sine_model_quantized.h"
+#include "sine_model.h"
 #include "time.h"
 
 #define N_INPUTS 1
@@ -152,7 +152,7 @@ void setup()
 
   // TensorFlow initialization
 
-  tf.begin(sine_model_quantized_tflite);
+  tf.begin(model_data);
 
   // check if model loaded fine
   if (!tf.initialized())

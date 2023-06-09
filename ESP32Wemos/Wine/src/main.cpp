@@ -1,6 +1,6 @@
 #include <WiFi.h>
 #include <EloquentTinyML.h>
-#include "wine_nn.h"
+#include "wine_model.h"
 #include "esp_timer.h"
 #include "time.h"
 

@@ -3,7 +3,7 @@
 #include <Ticker.h>
 #include <AsyncMqttClient.h>
 #include <EloquentTinyML.h>
-#include "wine_nn.h"
+#include "wine_model.h"
 #include "time.h"
 
 #define NUMBER_OF_INPUTS 13

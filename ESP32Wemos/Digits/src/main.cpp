@@ -223,6 +223,8 @@ void tensorFlowLoop()
 
     currentIteration += 1; // To keep track of iterations between loops
 
+    Serial.print("Started evaluating");
+
     int start = esp_timer_get_time(); // Evaluation start time
     uint8_t result = tf.predict(x_test, y_pred);
     int end = esp_timer_get_time() - start; // Evaluation end time
