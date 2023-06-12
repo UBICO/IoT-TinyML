@@ -1,0 +1,7 @@
+#{await_condition_timeout => 30000,broadcast_time => 100,
+  cluster_name => mqtt_node,friendly_name => "mqtt_node",
+  id => {mqtt_node,rabbit@0f5478f8fbad},
+  initial_members => [],install_snap_rpc_timeout => 120000,
+  log_init_args => #{uid => <<"MQTT_NEJA3ID43FFUE">>},
+  machine => {module,mqtt_machine,#{}},
+  tick_timeout => 65,uid => <<"MQTT_NEJA3ID43FFUE">>}.

@@ -2,13 +2,40 @@
 #include <EloquentTinyML.h>
 #include "wine_model.h"
 #include "esp_timer.h"
-#include "time.h"
 
 #define NUMBER_OF_INPUTS 13
 #define NUMBER_OF_OUTPUTS 3
 #define TENSOR_ARENA_SIZE 16 * 1024
 
 Eloquent::TinyML::TfLite<NUMBER_OF_INPUTS, NUMBER_OF_OUTPUTS, TENSOR_ARENA_SIZE> tf;
+
+// FreeRTOS timers
+
+extern "C"{
+#include "freertos/FreeRTOS.h"
+#include "freertos/timers.h"
+}
+#include <AsyncMqttClient.h>
+
+// WiFi SSID and password
+
+#define WIFI_SSID "Berto's iPhone"
+#define WIFI_PASSWORD "fogfogfog"
+
+// MQTT Broker configuration and port
+
+#define MQTT_HOST IPAddress(172, 20, 10, 5)
+#define MQTT_PORT 1883
+
+// Global variables for MQTT and timer for handling the reconnections
+
+AsyncMqttClient mqttClient;
+TimerHandle_t mqttReconnectTimer;
+TimerHandle_t wifiReconnectTimer;
+
+// Variable to keep track of the iteration number
+
+int currentIteration = 0;
 
 // Elements for evaluation
 
@@ -56,46 +83,6 @@ float X_test[20][13] = {
 
 uint8_t y_test[20] = {2, 2, 1, 0, 0, 2, 0, 0, 1, 1, 0, 2, 1, 1, 1, 1, 1, 0, 0, 0};
 
-// FreeRTOS timers
-
-extern "C"
-{
-#include "freertos/FreeRTOS.h"
-#include "freertos/timers.h"
-}
-#include <AsyncMqttClient.h>
-
-// To have conditional branches for testing
-
-#define USE_MQTT 0
-
-// WiFi SSID and password
-
-#define WIFI_SSID "Berto's iPhone"
-#define WIFI_PASSWORD "iotexamdemo"
-
-// MQTT Broker configuration and port
-
-#define MQTT_HOST IPAddress(172, 20, 10, 5)
-
-#define MQTT_PORT 1883
-
-// Global variables for MQTT and timer for handling the reconnections
-
-AsyncMqttClient mqttClient;
-TimerHandle_t mqttReconnectTimer;
-TimerHandle_t wifiReconnectTimer;
-
-// NTP server to request epoch time
-const char *ntpServer = "pool.ntp.org";
-
-// Variable to save current epoch time
-unsigned long epochTime;
-
-// Variable to keep track of the iteration number
-
-int currentIteration = 0;
-
 // Method to connect to WiFi
 
 void connectToWifi()
@@ -116,29 +103,21 @@ void connectToMqtt()
 
 // Callback for a WiFi event
 
-void WiFiEvent(WiFiEvent_t event)
-{
-  Serial.printf("[WiFi-event] event: %d\n", event);
-  switch (event)
-  {
-  case SYSTEM_EVENT_STA_GOT_IP:
-    Serial.println("WiFi connected");
-    Serial.println("IP address: ");
-    Serial.println(WiFi.localIP());
-    connectToMqtt();
-    break;
-  case SYSTEM_EVENT_STA_CONNECTED:
-    Serial.println("WiFi connected");
-    Serial.println("IP address: ");
-    Serial.println(WiFi.localIP());
-    connectToMqtt();
-    break;
-  case SYSTEM_EVENT_STA_DISCONNECTED:
-    Serial.println("WiFi lost connection");
-    xTimerStop(mqttReconnectTimer, 0); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
-    xTimerStart(wifiReconnectTimer, 0);
-    break;
-  }
+void WiFiEvent(WiFiEvent_t event) {
+    Serial.printf("[WiFi-event] event: %d\n", event);
+    switch(event) {
+    case SYSTEM_EVENT_STA_GOT_IP:
+        Serial.println("WiFi connected");
+        Serial.println("IP address: ");
+        Serial.println(WiFi.localIP());
+        connectToMqtt();
+        break;
+    case SYSTEM_EVENT_STA_DISCONNECTED:
+        Serial.println("WiFi lost connection");
+        xTimerStop(mqttReconnectTimer, 0); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
+        xTimerStart(wifiReconnectTimer, 0);
+        break;
+    }
 }
 
 // Callback for mqtt connection
@@ -186,23 +165,9 @@ void onMqttUnsubscribe(uint16_t packetId)
 
 void onMqttPublish(uint16_t packetId)
 {
-  Serial.println("Publish acknowledged.");
-  Serial.print("  packetId: ");
-  Serial.println(packetId);
-}
-
-// Function that gets current epoch time
-unsigned long getTime()
-{
-  time_t now;
-  struct tm timeinfo;
-  if (!getLocalTime(&timeinfo))
-  {
-    Serial.println("Cannot get time from ntp server.");
-    return (0);
-  }
-  time(&now);
-  return now;
+  //Serial.println("Publish acknowledged.");
+  // Serial.print("  packetId: ");
+  // Serial.println(packetId);
 }
 
 // Setup method
@@ -212,7 +177,21 @@ void setup()
   Serial.begin(9600);
   Serial.println();
 
-  // TensorFlow initialization
+  mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void *)0, reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
+  wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdFALSE, (void *)0, reinterpret_cast<TimerCallbackFunction_t>(connectToWifi));
+
+  WiFi.onEvent(WiFiEvent);
+
+  mqttClient.onConnect(onMqttConnect);
+  mqttClient.onDisconnect(onMqttDisconnect);
+  mqttClient.onSubscribe(onMqttSubscribe);
+  mqttClient.onUnsubscribe(onMqttUnsubscribe);
+  mqttClient.onPublish(onMqttPublish);
+  mqttClient.setServer(MQTT_HOST, MQTT_PORT);
+
+  connectToWifi();
+
+   // TensorFlow initialization
 
   tf.begin(wine_model);
 
@@ -223,97 +202,50 @@ void setup()
     while (true)
       delay(1000);
   }
-
-  if (USE_MQTT)
-  {
-    configTime(0, 0, ntpServer);
-
-    mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void *)0, reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
-    wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdFALSE, (void *)0, reinterpret_cast<TimerCallbackFunction_t>(connectToWifi));
-
-    WiFi.onEvent(WiFiEvent);
-
-    mqttClient.onConnect(onMqttConnect);
-    mqttClient.onDisconnect(onMqttDisconnect);
-    mqttClient.onSubscribe(onMqttSubscribe);
-    mqttClient.onUnsubscribe(onMqttUnsubscribe);
-    mqttClient.onPublish(onMqttPublish);
-    mqttClient.setServer(MQTT_HOST, MQTT_PORT);
-
-    connectToWifi();
-  }
-}
-
-// Tensorflow prediction
-
-void tensorFlowLoop()
-{
-
-  // Runs a loop of 10 iterations, at every one it sends the result (if enabled)
-
-  for (uint8_t i = 0; i < 10; i++)
-  {
-
-    currentIteration += 1; // To keep track of iterations between loops
-
-    int start = esp_timer_get_time(); // Evaluation start time
-    uint8_t result = tf.predictClass(X_test[i]);
-    int end = esp_timer_get_time() - start; // Evaluation end time
-
-    Serial.print("Sample #");
-    Serial.print(i + 1);
-    Serial.print(": ");
-    Serial.print("predicted ");
-    Serial.print(result);
-    Serial.print(" vs ");
-    Serial.print(y_test[i]);
-    Serial.println(" actual");
-    Serial.println("Evaluation time: " + String(end) + " microseconds");
-
-    if (USE_MQTT)
-    {
-      // Here i get the unix time for having a timestamp of the operation
-
-      epochTime = getTime();
-
-      // DTO to be created
-      //{"board": "esp32dev", "model": "wine", "result": 1, "iteration": 1, "microseconds": 120, "timestamp": "1683815110824"}
-
-      String resultString = "{'prediction':" + String(result) + "}";
-
-      uint16_t packetId = mqttClient.publish("iotdemo.esp32dev", 1, true, (char *)resultString.c_str());
-      Serial.print("Message sent with packetId: ");
-      Serial.println(packetId);
-    }
-  }
 }
 
 // Loop method
 
 void loop()
 {
-
-  if (USE_MQTT)
+  if (WiFi.isConnected() && mqttClient.connected())
   {
+    // Runs a loop of 10 iterations, at every one it sends the result (if enabled)
+    // Waits 5 seconds, then restarts
 
-    // If we want to use MQTT, we need the WiFi connection and the connection to the broker before evaluating
-    // in order to send the results
+    for (uint8_t i = 0; i < 10; i++)
+    {
 
-    if (WiFi.isConnected() && mqttClient.connected())
-    {
-      tensorFlowLoop();
-    }
-    else
-    {
-      Serial.println("WiFi or MQTT not connected, waiting before running evaluation.");
+      currentIteration += 1; // To keep track of iterations between loops
+
+      int start = esp_timer_get_time(); // Evaluation start time
+      uint8_t result = tf.predictClass(X_test[i]);
+      int end = esp_timer_get_time() - start; // Evaluation end time
+
+      Serial.print("Sample #");
+      Serial.print(i + 1);
+      Serial.print(": ");
+      Serial.print("predicted ");
+      Serial.print(result);
+      Serial.print(" vs ");
+      Serial.print(y_test[i]);
+      Serial.println(" actual");
+      Serial.println("Evaluation time: " + String(end) + " microseconds");
+
+      // DTO to be created
+      //{"board": "esp32dev", "model": "wine", "result": 1, "iteration": 1, "microseconds": 120}
+
+      String resultString = "{'prediction':" + String(result) + "}";
+
+      uint16_t packetId = mqttClient.publish("iotdemo.esp32dev", 1, true, (char *)resultString.c_str());
+      Serial.print("Message sent with packetId: ");
+      Serial.println(packetId);
+      delay(100);
     }
   }
   else
   {
-
-    // If we don't have mqtt enabled, we directly run the evaluations for testing
-
-    tensorFlowLoop();
+    Serial.println("WiFi or MQTT not connected, waiting before running evaluation.");
   }
 
   delay(5000);

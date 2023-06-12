@@ -1,0 +1,35 @@
+version: '3.8'
+services:
+  broker:
+    image: rabbitmq:3
+    restart: always
+    environment:
+    - RABBITMQ_DEFAULT_USER=federico
+    - RABBITMQ_DEFAULT_PASS=iotexamdemo
+    command: "/bin/bash -c \"rabbitmq-plugins enable rabbitmq_mqtt; rabbitmq-plugins enable rabbitmq_prometheus; rabbitmq-server\""
+    ports:
+      - 1883:1883
+      - 15672:15672
+      - 15675:15675
+      - 15692:15692
+      - 5672:5672
+    volumes:
+      - "./rabbitmq:/etc/rabbitmq"
+      - "./data:/var/lib/rabbitmq/mnesia/"
+  prometheus:
+    image: prom/prometheus:v2.42.0
+    restart: always
+    ports:
+    - 9090:9090
+    volumes:
+    - /Users/federico/Sviluppatore/IoT/prometheus:/etc/prometheus
+  grafana:
+    image: grafana/grafana
+    restart: always
+    ports:
+      - 3000:3000
+    volumes:
+      - grafana-storage:/var/lib/grafana
+volumes:
+  grafana-storage:
+    external: true
