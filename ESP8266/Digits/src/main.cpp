@@ -126,9 +126,6 @@ void setup()
 
   mqttClient.onConnect(onMqttConnect);
   mqttClient.onDisconnect(onMqttDisconnect);
-  // mqttClient.onSubscribe(onMqttSubscribe);
-  // mqttClient.onUnsubscribe(onMqttUnsubscribe);
-  // mqttClient.onPublish(onMqttPublish);
   mqttClient.setServer(MQTT_HOST, MQTT_PORT);
 
   connectToWifi();
@@ -148,7 +145,7 @@ void loop()
       currentIteration += 1; // To keep track of iterations between loops
 
       uint32_t start = micros(); // Evaluation start time
-      uint8_t result = tf.predict(x_test, y_pred);
+      tf.predict(x_test, y_pred);
       uint32_t end = micros() - start; // Evaluation end time
 
       Serial.print("Test output is: ");
@@ -162,7 +159,8 @@ void loop()
       }
 
       Serial.print("Predicted class is: ");
-      Serial.println(tf.probaToClass(y_pred));
+      uint8_t prediction = tf.probaToClass(y_pred);
+      Serial.println(prediction);      
       Serial.print("Sanity check: ");
       Serial.println(tf.predictClass(x_test));
       Serial.println("Evaluation time: " + String(end) + " microseconds");
@@ -170,7 +168,15 @@ void loop()
       // DTO to be created
       //{"board": "esp8266", "model": "digits", "result": 1, "iteration": 1, "microseconds": 120}
 
-      String resultString = "{'digits':" + String(result) + "}";
+      String startPar = "{";
+      String board = "\"board\":\"esp8266\",";
+      String model = "\"model\":\"digits\",";
+      String result = "\"result\":" + String(prediction) + ",";
+      String iteration = "\"iteration\":" + String(uint16_t(i)) + ",";
+      String time = "\"microseconds\":" + String(uint16_t(end));
+      String endPar = "}";
+
+      String resultString = startPar + board + model + result + iteration + time + endPar;
 
       uint16_t packetId = mqttClient.publish("iotdemo.esp8266", 1, true, (char *)resultString.c_str());
       Serial.print("Message sent with packetId: ");

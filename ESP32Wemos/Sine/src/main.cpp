@@ -56,7 +56,7 @@ void connectToMqtt() {
 //Callback for a WiFi event
 
 void WiFiEvent(WiFiEvent_t event) {
-    Serial.printf("[WiFi-event] event: %d\n", event);
+    //Serial.printf("[WiFi-event] event: %d\n", event);
     switch(event) {
     case SYSTEM_EVENT_STA_GOT_IP:
         Serial.println("WiFi connected");
@@ -90,32 +90,6 @@ void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
   }
 }
 
-//Callback for mqtt subscription
-
-void onMqttSubscribe(uint16_t packetId, uint8_t qos) {
-  Serial.println("Subscribe acknowledged.");
-  Serial.print("  packetId: ");
-  Serial.println(packetId);
-  Serial.print("  qos: ");
-  Serial.println(qos);
-}
-
-//Callback for mqtt unsubscription
-
-void onMqttUnsubscribe(uint16_t packetId) {
-  Serial.println("Unsubscribe acknowledged.");
-  Serial.print("  packetId: ");
-  Serial.println(packetId);
-}
-
-//Callback for mqtt published message
-
-void onMqttPublish(uint16_t packetId) {
-  //Serial.println("Publish acknowledged.");
-  //Serial.print("  packetId: ");
-  //Serial.println(packetId);
-}
-
 //Setup method
 
 void setup() {
@@ -129,9 +103,6 @@ void setup() {
 
   mqttClient.onConnect(onMqttConnect);
   mqttClient.onDisconnect(onMqttDisconnect);
-  mqttClient.onSubscribe(onMqttSubscribe);
-  mqttClient.onUnsubscribe(onMqttUnsubscribe);
-  mqttClient.onPublish(onMqttPublish);
   mqttClient.setServer(MQTT_HOST, MQTT_PORT);
 
   connectToWifi();
@@ -178,7 +149,15 @@ void loop() {
 
         //{"board": "esp32wemos", "model": "sin", "result": 3.14, "iteration": 1, "microseconds": 120}
 
-        String resultString = "{'sin':" + String(x) + "}";
+        String startPar = "{";
+        String board = "\"board\":\"esp32wemos\",";
+        String model = "\"model\":\"sin\",";
+        String result = "\"result\":" + String(x) + ",";
+        String iteration = "\"iteration\":" + String(uint16_t(i)) + ",";
+        String time = "\"microseconds\":" + String(uint16_t(end));
+        String endPar = "}";
+       
+        String resultString = startPar + board + model + result + iteration + time + endPar;
       
         uint16_t packetId = mqttClient.publish("iotdemo.esp32wemos", 1, true, (char*) resultString.c_str());
         Serial.print("Message sent with packetId: ");

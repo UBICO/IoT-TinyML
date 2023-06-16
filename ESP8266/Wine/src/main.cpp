@@ -155,14 +155,14 @@ void loop()
       currentIteration += 1; // To keep track of iterations between loops
 
       uint32_t start = micros(); // Evaluation start time
-      uint8_t result = tf.predictClass(X_test[i]);
+      uint8_t resultClass = tf.predictClass(X_test[i]);
       uint32_t end = micros() - start; // Evaluation end time
 
       Serial.print("Sample #");
       Serial.print(i + 1);
       Serial.print(": ");
       Serial.print("predicted ");
-      Serial.print(result);
+      Serial.print(resultClass);
       Serial.print(" vs ");
       Serial.print(y_test[i]);
       Serial.println(" actual");
@@ -171,7 +171,15 @@ void loop()
       // DTO to be created
       //{"board": "esp8266", "model": "wine", "result": 1, "iteration": 1, "microseconds": 120}
 
-      String resultString = "{'wine':" + String(result) + "}";
+      String startPar = "{";
+      String board = "\"board\":\"esp8266\",";
+      String model = "\"model\":\"wine\",";
+      String result = "\"result\":" + String(resultClass) + ",";
+      String iteration = "\"iteration\":" + String(uint16_t(i)) + ",";
+      String time = "\"microseconds\":" + String(uint16_t(end));
+      String endPar = "}";
+
+      String resultString = startPar + board + model + result + iteration + time + endPar;
 
       uint16_t packetId = mqttClient.publish("iotdemo.esp8266", 1, true, (char *)resultString.c_str());
       Serial.print("Message sent with packetId: ");
