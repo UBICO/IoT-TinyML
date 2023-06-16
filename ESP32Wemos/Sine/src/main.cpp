@@ -153,7 +153,7 @@ void loop() {
         String board = "\"board\":\"esp32wemos\",";
         String model = "\"model\":\"sin\",";
         String result = "\"result\":" + String(x) + ",";
-        String iteration = "\"iteration\":" + String(uint16_t(i)) + ",";
+        String iteration = "\"iteration\":" + String(uint16_t(currentIteration)) + ",";
         String time = "\"microseconds\":" + String(uint16_t(end));
         String endPar = "}";
        

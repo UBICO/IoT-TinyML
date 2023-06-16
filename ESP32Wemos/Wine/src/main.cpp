@@ -207,7 +207,7 @@ void loop()
       String board = "\"board\":\"esp32wemos\",";
       String model = "\"model\":\"wine\",";
       String result = "\"result\":" + String(resultClass) + ",";
-      String iteration = "\"iteration\":" + String(uint16_t(i)) + ",";
+      String iteration = "\"iteration\":" + String(uint16_t(currentIteration)) + ",";
       String time = "\"microseconds\":" + String(uint16_t(end));
       String endPar = "}";
 

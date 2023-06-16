@@ -154,6 +154,8 @@ void loop()
     {
       currentIteration += 1; // To keep track of iterations between loops
 
+      //Serial.print("Iteration #" + String(currentIteration));
+
       uint32_t start = micros(); // Evaluation start time
       uint8_t resultClass = tf.predictClass(X_test[i]);
       uint32_t end = micros() - start; // Evaluation end time
@@ -175,11 +177,13 @@ void loop()
       String board = "\"board\":\"esp8266\",";
       String model = "\"model\":\"wine\",";
       String result = "\"result\":" + String(resultClass) + ",";
-      String iteration = "\"iteration\":" + String(uint16_t(i)) + ",";
+      String iteration = "\"iteration\":" + String(uint16_t(currentIteration)) + ",";
       String time = "\"microseconds\":" + String(uint16_t(end));
       String endPar = "}";
 
       String resultString = startPar + board + model + result + iteration + time + endPar;
+
+      Serial.print(resultString);
 
       uint16_t packetId = mqttClient.publish("iotdemo.esp8266", 1, true, (char *)resultString.c_str());
       Serial.print("Message sent with packetId: ");
