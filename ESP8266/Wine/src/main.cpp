@@ -7,7 +7,7 @@
 
 #define NUMBER_OF_INPUTS 13
 #define NUMBER_OF_OUTPUTS 3
-#define TENSOR_ARENA_SIZE 16 * 1024
+#define TENSOR_ARENA_SIZE 8 * 1024
 
 Eloquent::TinyML::TfLite<NUMBER_OF_INPUTS, NUMBER_OF_OUTPUTS, TENSOR_ARENA_SIZE> tf;
 
@@ -89,35 +89,6 @@ void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
   }
 }
 
-// Callback for mqtt subscription
-
-void onMqttSubscribe(uint16_t packetId, uint8_t qos)
-{
-  Serial.println("Subscribe acknowledged.");
-  Serial.print("  packetId: ");
-  Serial.println(packetId);
-  Serial.print("  qos: ");
-  Serial.println(qos);
-}
-
-// Callback for mqtt unsubscription
-
-void onMqttUnsubscribe(uint16_t packetId)
-{
-  Serial.println("Unsubscribe acknowledged.");
-  Serial.print("  packetId: ");
-  Serial.println(packetId);
-}
-
-// Callback for mqtt published message
-
-void onMqttPublish(uint16_t packetId)
-{
-  //Serial.println("Publish acknowledged.");
-  // Serial.print("  packetId: ");
-  // Serial.println(packetId);
-}
-
 // Elements for evaluation
 
 float X_test[20][13] = {
@@ -166,9 +137,6 @@ void setup()
 
   mqttClient.onConnect(onMqttConnect);
   mqttClient.onDisconnect(onMqttDisconnect);
-  mqttClient.onSubscribe(onMqttSubscribe);
-  mqttClient.onUnsubscribe(onMqttUnsubscribe);
-  mqttClient.onPublish(onMqttPublish);
   mqttClient.setServer(MQTT_HOST, MQTT_PORT);
 
   connectToWifi();
@@ -184,9 +152,6 @@ void loop()
 
     for (uint8_t i = 0; i < 10; i++)
     {
-
-      Serial.println("Inside loop");
-
       currentIteration += 1; // To keep track of iterations between loops
 
       uint32_t start = micros(); // Evaluation start time
