@@ -177,13 +177,13 @@ void loop()
       String board = "\"board\":\"esp8266\",";
       String model = "\"model\":\"wine\",";
       String result = "\"result\":" + String(resultClass) + ",";
-      String iteration = "\"iteration\":" + String(uint16_t(currentIteration)) + ",";
-      String time = "\"microseconds\":" + String(uint16_t(end));
+      String iteration = "\"iteration\":" + String(int(currentIteration)) + ",";
+      String time = "\"microseconds\":" + String(int(end));
       String endPar = "}";
 
       String resultString = startPar + board + model + result + iteration + time + endPar;
 
-      Serial.print(resultString);
+      //Serial.print(resultString);
 
       uint16_t packetId = mqttClient.publish("iotdemo.esp8266", 1, true, (char *)resultString.c_str());
       Serial.print("Message sent with packetId: ");

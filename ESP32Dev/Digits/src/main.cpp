@@ -77,7 +77,7 @@ void connectToMqtt()
 // Callback for a WiFi event
 
 void WiFiEvent(WiFiEvent_t event) {
-    Serial.printf("[WiFi-event] event: %d\n", event);
+    //Serial.printf("[WiFi-event] event: %d\n", event);
     switch(event) {
     case SYSTEM_EVENT_STA_GOT_IP:
         Serial.println("WiFi connected");
@@ -187,8 +187,8 @@ void loop()
       String board = "\"board\":\"esp32dev\",";
       String model = "\"model\":\"digits\",";
       String result = "\"result\":" + String(prediction) + ",";
-      String iteration = "\"iteration\":" + String(uint16_t(currentIteration)) + ",";
-      String time = "\"microseconds\":" + String(uint16_t(end));
+      String iteration = "\"iteration\":" + String(int(currentIteration)) + ",";
+      String time = "\"microseconds\":" + String(int(end));
       String endPar = "}";
 
       String resultString = startPar + board + model + result + iteration + time + endPar;

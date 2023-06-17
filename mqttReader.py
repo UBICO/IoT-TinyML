@@ -2,9 +2,11 @@ import paho.mqtt.client as mqtt
 import json
 import pandas as pd
 
-esp32dev = []
-esp32wemos = []
-esp8266 = []
+esp32dev = {}
+esp32wemos = {}
+esp8266 = {}
+
+messagesCounter = 0
 
 def on_connect(client, userdata, flags, rc):
   print("Connected with result code "+str(rc))
@@ -13,33 +15,54 @@ def on_connect(client, userdata, flags, rc):
   client.subscribe("iotdemo/esp8266")
 
 def on_message(client, userdata, msg):
+
+  global messagesCounter
+
+  if (messagesCounter % 10 == 0):
+    print("Processed " + str(messagesCounter) + " elements")
+
+  messagesCounter = messagesCounter + 1
+
   received = json.loads(msg.payload.decode())
+  modelName = received['model']
   if (received['board'] == 'esp8266'):
-    esp8266.append(received)
-    if (int(received["iteration"]) % 50) == 0: #Every 50 iterations we replace the data
-      filename = "esp8266" + "_" + received['model'] + ".csv"
-      df = pd.DataFrame(esp8266)
-      df.to_csv(filename, index=False)
-      esp8266.clear()
-      print("Stored " + filename)
+    if (modelName in esp8266):
+      esp8266[modelName].append(received)
+      if (len(esp8266[modelName]) == 50):
+        filename = "esp8266" + "_" + modelName + ".csv"
+        df = pd.DataFrame(esp8266[modelName])
+        df.to_csv(filename, index=False)
+        esp8266[modelName].clear()
+        print("Stored " + filename)
+    else:
+      esp8266[modelName] = []
+      esp8266[modelName].append(received)
   elif (received['board'] == 'esp32dev'):
-    esp32dev.append(received)
-    if (int(received["iteration"]) % 50) == 0: #Every 50 iterations we replace the data
-      filename = "esp32dev" + "_" + received['model'] + ".csv"
-      df = pd.DataFrame(esp32dev)
-      df.to_csv(filename, index=False)
-      esp32dev.clear()
-      print("Stored " + filename)
+    if (modelName in esp32dev):
+      esp32dev[modelName].append(received)
+      if (len(esp32dev[modelName]) == 50):
+        filename = "esp32dev" + "_" + modelName + ".csv"
+        df = pd.DataFrame(esp32dev[modelName])
+        df.to_csv(filename, index=False)
+        esp32dev[modelName].clear()
+        print("Stored " + filename)
+    else:
+      esp32dev[modelName] = []
+      esp32dev[modelName].append(received)
   else:
-    esp32wemos.append(received)
-    if (int(received["iteration"]) % 50) == 0: #Every 50 iterations we replace the data
-      filename = "esp32wemos" + "_" + received['model'] + ".csv"
-      df = pd.DataFrame(esp32wemos)
-      df.to_csv(filename, index=False)
-      esp32wemos.clear()
-      print("Stored " + filename)
+    if (modelName in esp32wemos):
+      esp32wemos[modelName].append(received)
+      if (len(esp32wemos[modelName]) == 50):
+        filename = "esp32wemos" + "_" + modelName + ".csv"
+        df = pd.DataFrame(esp32wemos[modelName])
+        df.to_csv(filename, index=False)
+        esp32wemos[modelName].clear()
+        print("Stored " + filename)
+    else:
+      esp32wemos[modelName] = []
+      esp32wemos[modelName].append(received)
     
-client = mqtt.Client()
+client = mqtt.Client(client_id="mqttReader")
 client.username_pw_set("federico", "iotexamdemo")
 client.connect("localhost",1883,60)
 
