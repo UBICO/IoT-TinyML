@@ -30,94 +30,95 @@ uint8_t blk_count = 0;
 
 Eloquent::TinyML::TensorFlow::PersonDetection<imageWidth, imageHeight> personDetector;
 
-// FreeRTOS timers
+// // FreeRTOS timers
 
-extern "C"
-{
-#include "freertos/FreeRTOS.h"
-#include "freertos/timers.h"
-}
-#include <AsyncMqttClient.h>
+// extern "C"
+// {
+// #include "freertos/FreeRTOS.h"
+// #include "freertos/timers.h"
+// }
+// #include <AsyncMqttClient.h>
 
-// WiFi SSID and password
+// // WiFi SSID and password
 
-#define WIFI_SSID "Berto's iPhone"
-#define WIFI_PASSWORD "fogfogfog"
+// #define WIFI_SSID "Berto's iPhone"
+// #define WIFI_PASSWORD "fogfogfog"
 
-// MQTT Broker configuration and port
+// // MQTT Broker configuration and port
 
-#define MQTT_HOST IPAddress(172, 20, 10, 5)
+// #define MQTT_HOST IPAddress(172, 20, 10, 5)
 
-#define MQTT_PORT 1883
+// #define MQTT_PORT 1883
 
-// // Global variables for MQTT and timer for handling the reconnections
+// // // Global variables for MQTT and timer for handling the reconnections
 
-AsyncMqttClient mqttClient;
-TimerHandle_t mqttReconnectTimer;
-TimerHandle_t wifiReconnectTimer;
+// AsyncMqttClient mqttClient;
+// TimerHandle_t mqttReconnectTimer;
+// TimerHandle_t wifiReconnectTimer;
 
-// // Variable to keep track of the iteration number
+// // // Variable to keep track of the iteration number
 
 int currentIteration = 0;
+int timeSum = 0;
 
-// // Method to connect to WiFi
+// // // Method to connect to WiFi
 
-void connectToWifi()
-{
-    WiFi.disconnect();
-    Serial.println("Connecting to Wi-Fi...");
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-}
+// void connectToWifi()
+// {
+//     WiFi.disconnect();
+//     Serial.println("Connecting to Wi-Fi...");
+//     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+// }
 
-// // Method to connect to Mqtt
+// // // Method to connect to Mqtt
 
-void connectToMqtt()
-{
-    Serial.println("Connecting to MQTT...");
-    mqttClient.setCredentials("federico", "iotexamdemo");
-    mqttClient.connect();
-}
+// void connectToMqtt()
+// {
+//     Serial.println("Connecting to MQTT...");
+//     mqttClient.setCredentials("federico", "iotexamdemo");
+//     mqttClient.connect();
+// }
 
-// // Callback for a WiFi event
+// // // Callback for a WiFi event
 
-void WiFiEvent(WiFiEvent_t event)
-{
-    switch (event)
-    {
-    case SYSTEM_EVENT_STA_GOT_IP:
-        Serial.println("WiFi connected");
-        Serial.println("IP address: ");
-        Serial.println(WiFi.localIP());
-        connectToMqtt();
-        break;
-    case SYSTEM_EVENT_STA_DISCONNECTED:
-        Serial.println("WiFi lost connection");
-        xTimerStop(mqttReconnectTimer, 0); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
-        xTimerStart(wifiReconnectTimer, 0);
-        break;
-    }
-}
+// void WiFiEvent(WiFiEvent_t event)
+// {
+//     switch (event)
+//     {
+//     case SYSTEM_EVENT_STA_GOT_IP:
+//         Serial.println("WiFi connected");
+//         Serial.println("IP address: ");
+//         Serial.println(WiFi.localIP());
+//         connectToMqtt();
+//         break;
+//     case SYSTEM_EVENT_STA_DISCONNECTED:
+//         Serial.println("WiFi lost connection");
+//         xTimerStop(mqttReconnectTimer, 0); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
+//         xTimerStart(wifiReconnectTimer, 0);
+//         break;
+//     }
+// }
 
-// // Callback for mqtt connection
+// // // Callback for mqtt connection
 
-void onMqttConnect(bool sessionPresent)
-{
-    Serial.println("Connected to MQTT.");
-    Serial.print("Session present: ");
-    Serial.println(sessionPresent);
-}
+// void onMqttConnect(bool sessionPresent)
+// {
+//     Serial.println("Connected to MQTT.");
+//     Serial.print("Session present: ");
+//     Serial.println(sessionPresent);
+// }
 
-// // Callback for mqtt disconnection
+// // // Callback for mqtt disconnection
 
-void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
-{
-    Serial.println("Disconnected from MQTT.");
+// void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
+// {
+//     Serial.println("Disconnected from MQTT.");
 
-    if (WiFi.isConnected())
-    {
-        xTimerStart(mqttReconnectTimer, 0);
-    }
-}
+//     if (WiFi.isConnected())
+//     {
+//         xTimerStart(mqttReconnectTimer, 0);
+//     }
+// }
 
 // Setup method
 
@@ -140,16 +141,16 @@ void setup()
         Serial.println(personDetector.getErrorMessage());
     }
 
-    //mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void *)0, reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
-    //wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdFALSE, (void *)0, reinterpret_cast<TimerCallbackFunction_t>(connectToWifi));
+    // mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void *)0, reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
+    // wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdFALSE, (void *)0, reinterpret_cast<TimerCallbackFunction_t>(connectToWifi));
 
-    WiFi.onEvent(WiFiEvent);
+    // WiFi.onEvent(WiFiEvent);
 
-    mqttClient.onConnect(onMqttConnect);
-    mqttClient.onDisconnect(onMqttDisconnect);
-    mqttClient.setServer(MQTT_HOST, MQTT_PORT);
+    // mqttClient.onConnect(onMqttConnect);
+    // mqttClient.onDisconnect(onMqttDisconnect);
+    // mqttClient.setServer(MQTT_HOST, MQTT_PORT);
 
-    //connectToWifi();
+    // connectToWifi();
 }
 
 // Loop method
@@ -158,67 +159,74 @@ void loop()
 {
     // if (WiFi.isConnected() && mqttClient.connected())
     // {
-            currentIteration += 1; // To keep track of iterations between loops
+    
+    currentIteration += 1; // To keep track of iterations between loops
 
-            blk_count = camera->yres / I2SCamera::blockSlice;
-            for (int i = 0; i < blk_count; i++)
-            {
+    blk_count = camera->yres / I2SCamera::blockSlice;
+    for (int i = 0; i < blk_count; i++)
+    {
 
-                if (i == 0)
-                {
-                    camera->startBlock = 1;
-                    camera->endBlock = I2SCamera::blockSlice;
-                }
+        if (i == 0)
+        {
+            camera->startBlock = 1;
+            camera->endBlock = I2SCamera::blockSlice;
+        }
 
-                if (i == blk_count - 1)
-                {
-                }
+        if (i == blk_count - 1)
+        {
+        }
 
-                camera->oneFrame();
-                camera->startBlock += I2SCamera::blockSlice;
-                camera->endBlock += I2SCamera::blockSlice;
-            }
+        camera->oneFrame();
+        camera->startBlock += I2SCamera::blockSlice;
+        camera->endBlock += I2SCamera::blockSlice;
+    }
 
-            bool isPersonInFrame = personDetector.detectPerson(camera->frame);
+    bool isPersonInFrame = personDetector.detectPerson(camera->frame);
 
-            if (!personDetector.isOk())
-            {
-                Serial.print("Person detector detection error: ");
-                Serial.println(personDetector.getErrorMessage());
-                delay(1000);
-                return;
-            }
+    if (!personDetector.isOk())
+    {
+        Serial.print("Person detector detection error: ");
+        Serial.println(personDetector.getErrorMessage());
+        delay(1000);
+        return;
+    }
+    
+    Serial.println(isPersonInFrame ? "Person detected" : "No person detected");
+    Serial.print("\t > It took ");
+    Serial.print(personDetector.getElapsedTime());
+    Serial.println("ms to detect");
+    Serial.print("\t > Person score: ");
+    Serial.println(personDetector.getPersonScore());
+    Serial.print("\t > Not person score: ");
+    Serial.println(personDetector.getNotPersonScore());
 
-            Serial.println(isPersonInFrame ? "Person detected" : "No person detected");
-            Serial.print("\t > It took ");
-            Serial.print(personDetector.getElapsedTime());
-            Serial.println("ms to detect");
-            Serial.print("\t > Person score: ");
-            Serial.println(personDetector.getPersonScore());
-            Serial.print("\t > Not person score: ");
-            Serial.println(personDetector.getNotPersonScore());
+    //For calculating the average time
 
-            Serial.println("Evaluation time: " + String(personDetector.getElapsedTime()) + " milliseconds");
+    timeSum += personDetector.getElapsedTime();
 
-            //{"board": "esp32dev", "model": "person", "result": 1, "iteration": 1, "microseconds": 120}
+    Serial.println("Elapsed time: " + String(personDetector.getElapsedTime()));
 
-            String startPar = "{";
-            String board = "\"board\":\"esp32dev\",";
-            String model = "\"model\":\"person\",";
-            String result = "\"result\":" + String(personDetector.getPersonScore()) + ",";
-            String iteration = "\"iteration\":" + String(int(currentIteration)) + ",";
-            String time = "\"microseconds\":" + String(int(personDetector.getElapsedTime()) * 1000);
-            String endPar = "}";
+    Serial.println("Average time on " + String(currentIteration) + " iterations: " + (timeSum / currentIteration));
 
-            String resultString = startPar + board + model + result + iteration + time + endPar;
+    // //{"board": "esp32dev", "model": "person", "result": 1, "iteration": 1, "microseconds": 120}
 
-            Serial.print(resultString);
+    // String startPar = "{";
+    // String board = "\"board\":\"esp32dev\",";
+    // String model = "\"model\":\"person\",";
+    // String result = "\"result\":" + String(personDetector.getPersonScore()) + ",";
+    // String iteration = "\"iteration\":" + String(int(currentIteration)) + ",";
+    // String time = "\"microseconds\":" + String(int(personDetector.getElapsedTime()) * 1000);
+    // String endPar = "}";
 
-            // uint16_t packetId = mqttClient.publish("iotdemo.esp32dev", 1, true, (char *)resultString.c_str());
-            // Serial.print("Message sent with packetId: ");
-            // Serial.println(packetId);
-            //delay(100);
-   // }
+    // String resultString = startPar + board + model + result + iteration + time + endPar;
+
+    // Serial.print(resultString);
+
+    // uint16_t packetId = mqttClient.publish("iotdemo.esp32dev", 1, true, (char *)resultString.c_str());
+    // Serial.print("Message sent with packetId: ");
+    // Serial.println(packetId);
+    // delay(100);
+    // }
     // else
     // {
     //     Serial.println("WiFi or MQTT not connected, waiting before running evaluation.");
