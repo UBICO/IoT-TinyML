@@ -18,10 +18,6 @@ extern "C"
 }
 #include <AsyncMqttClient.h>
 
-// To have conditional branches for testing
-
-#define USE_MQTT 0
-
 // WiFi SSID and password
 
 #define WIFI_SSID "Berto's iPhone"
